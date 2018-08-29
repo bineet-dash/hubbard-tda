@@ -110,25 +110,25 @@ cd matrix_elem(int i, int m, int j, int n)
 	// res -= del(i,j)*del(m,n)*(h.sum());
 	for(int site=0; site<L; site++)
 	{
-		res -= 0.25*U_prime*sigma(site,2)*(-del(m,n)*conj(U(site,j-1))*U(site,i-1) + del(i,j)*conj(U(site,m-1))*U(site,n-1)+ del(i,j)*del(m,n)*U.row(site).squaredNorm());
+		res -= 0.25*U_prime*sigma(site,2)*(-del(m,n)*conj(U(site,j))*U(site,i) + del(i,j)*conj(U(site,m))*U(site,n)+ del(i,j)*del(m,n)*U.row(site).squaredNorm());
 	}
 	for(int site=0; site<L; site++)
 	{
-		res += 0.25*U_prime*sigma(site,2)*(-del(m,n)*conj(U(site+L,j-1))*U(site+L,i-1) + del(i,j)*conj(U(site+L,m-1))*U(site+L,n-1)+ del(i,j)*del(m,n)*U.row(site).squaredNorm());
+		res += 0.25*U_prime*sigma(site,2)*(-del(m,n)*conj(U(site+L,j))*U(site+L,i) + del(i,j)*conj(U(site+L,m))*U(site+L,n)+ del(i,j)*del(m,n)*U.row(site).squaredNorm());
 	}
 
 	cd interaction = 0; 
 	for(int site=0; site<L; site++)
 	{
-		cd temp1 = conj(U(site,m-1))*U.row(site).dot(U.row(site+L))*U(site+L,n-1) - conj(U(site,m-1))*U(site,n-1)*U.row(site+L).squaredNorm() 
-						+ conj(U(site+L,m-1))*U(site+L,n-1)*U.row(site).squaredNorm() - conj(U(site+L,m-1))*U(site,n-1)*U.row(site+L).dot(U.row(site))
+		cd temp1 = conj(U(site,m))*U.row(site).dot(U.row(site+L))*U(site+L,n) - conj(U(site,m))*U(site,n)*U.row(site+L).squaredNorm() 
+						+ conj(U(site+L,m))*U(site+L,n)*U.row(site).squaredNorm() - conj(U(site+L,m))*U(site,n)*U.row(site+L).dot(U.row(site))
 						+ del(m,n)*(U.row(site).squaredNorm()*U.row(site+L).squaredNorm() - U.row(site+L).dot(U.row(site))*U.row(site).dot(U.row(site+L)));
 		
-		cd temp2 = -del(m,n)*U.row(site).squaredNorm()*conj(U(site+L,j-1))*U(site+L,i-1)+ conj(U(site,m-1))*U(site,n-1)*conj(U(site+L,j-1))*U(site+L,i-1)
-						+ conj(U(site,j-1))*U(site,n-1)*conj(U(site+L,m-1))*U(site+L,i-1) - del(m,n)*conj(U(site,j-1))*U(site+L,i-1)*U.row(site).dot(U.row(site+L));
+		cd temp2 = -del(m,n)*U.row(site).squaredNorm()*conj(U(site+L,j))*U(site+L,i)+ conj(U(site,m))*U(site,n)*conj(U(site+L,j))*U(site+L,i)
+						+ conj(U(site,j))*U(site,n)*conj(U(site+L,m))*U(site+L,i) - del(m,n)*conj(U(site,j))*U(site+L,i)*U.row(site).dot(U.row(site+L));
 
-		cd temp3 = conj(U(site,m-1))*U(site,i-1)*conj(U(site+L,j-1))*U(site+L,i-1) + del(m,n)*U.row(site+L).dot(U.row(site))*U(site,i-1)*conj(U(site+L,j-1))
-						-conj(U(site,j-1))*U(site,i-1)*conj(U(site+L,m-1))*U(site+L,n-1) - del(m,n)*conj(U(site,j-1))*U(site,i-1)*U.row(site+L).squaredNorm();
+		cd temp3 = conj(U(site,m))*U(site,i)*conj(U(site+L,j))*U(site+L,i) + del(m,n)*U.row(site+L).dot(U.row(site))*U(site,i)*conj(U(site+L,j))
+						-conj(U(site,j))*U(site,i)*conj(U(site+L,m))*U(site+L,n) - del(m,n)*conj(U(site,j))*U(site,i)*U.row(site+L).squaredNorm();
 		
 		interaction += U_prime*del(i,j)*temp1+temp2+temp3;
 	}
