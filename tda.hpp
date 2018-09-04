@@ -107,7 +107,7 @@ MatrixXcd matrixelement_sigmaz(MatrixXd randsigma)
 cd matrix_elem(int i, int m, int j, int n)
 {
 	cd res = 0;
-	// res -= del(i,j)*del(m,n)*(h.sum());
+	// // res -= del(i,j)*del(m,n)*(h.sum());
 	for(int site=0; site<L; site++)
 	{
 		res -= 0.25*U_prime*sigma(site,2)*(-del(m,n)*conj(U(site,j))*U(site,i) + del(i,j)*conj(U(site,m))*U(site,n)+ del(i,j)*del(m,n)*U.row(site).squaredNorm());
@@ -127,55 +127,47 @@ cd matrix_elem(int i, int m, int j, int n)
 		cd temp2 = -del(m,n)*U.row(site).squaredNorm()*conj(U(site+L,j))*U(site+L,i)+ conj(U(site,m))*U(site,n)*conj(U(site+L,j))*U(site+L,i)
 						+ conj(U(site,j))*U(site,n)*conj(U(site+L,m))*U(site+L,i) - del(m,n)*conj(U(site,j))*U(site+L,i)*U.row(site).dot(U.row(site+L));
 
-		cd temp3 = conj(U(site,m))*U(site,i)*conj(U(site+L,j))*U(site+L,i) + del(m,n)*U.row(site+L).dot(U.row(site))*U(site,i)*conj(U(site+L,j))
+		cd temp3 = conj(U(site,m))*U(site,i)*conj(U(site+L,j))*U(site+L,n) + del(m,n)*U.row(site+L).dot(U.row(site))*U(site,i)*conj(U(site+L,j))
 						-conj(U(site,j))*U(site,i)*conj(U(site+L,m))*U(site+L,n) - del(m,n)*conj(U(site,j))*U(site,i)*U.row(site+L).squaredNorm();
 		
-		interaction += U_prime*del(i,j)*temp1+temp2+temp3;
+		interaction += U_prime*del(i,j)*temp1+ temp2 +temp3;
 	}
 
 	res += interaction;
 	return res;
 }
 
+double get_mu(double temperature, std::vector<double> v)
+{
+  sort (v.begin(), v.end());
+  double bisection_up_lim = v.back();
+  double bisection_low_lim = v.front();
+
+  double mu, no_of_electrons; int count=0;
+  double epsilon = 0.000001;
+
+  for(; ;)
+  {
+    no_of_electrons=0;
+    mu = 0.5*(bisection_low_lim+bisection_up_lim);
+
+    for(auto it = v.begin(); it!= v.end(); it++)
+    {
+      double fermi_func = 1/(exp((*it-mu)/temperature)+1);
+      no_of_electrons += fermi_func;
+    }
+    if(abs(no_of_electrons-L) < epsilon)
+    {
+      return mu; break;
+    }
+    else if(no_of_electrons > L+epsilon)
+    {
+       if(abs(bisection_up_lim-v.front())<0.001){return mu; break;}
+       else {bisection_up_lim=mu;}
+    }
+    else if(no_of_electrons < L-epsilon)
+    {bisection_low_lim=mu;}
+  }
+}
+
 #endif
-
-// int main()
-// {
-//     U = MatrixXcd::Zero(4,4);
-//     h = VectorXd::Zero(4);
-//     U << -1,0,0,1,
-//         0,1,-1,0,
-//         1,0,0,1,
-//         0,1,1,0;
-//     h << 3, -1, 1, 1;
-    
-//     MatrixXcd H = MatrixXcd::Zero(4,4);
-
-//     H(0,0) = matrix_elem(1,3,1,3);
-//     H(0,1) = matrix_elem(1,3,1,4);
-//     H(0,2) = matrix_elem(1,3,2,3);
-//     H(0,3) = matrix_elem(1,3,2,4);
-
-//     H(1,0) = matrix_elem(1,4,1,3);
-//     H(1,1) = matrix_elem(1,4,1,4);
-//     H(1,2) = matrix_elem(1,4,2,3);
-//     H(1,3) = matrix_elem(1,4,2,4);
-    
-//     H(2,0) = matrix_elem(2,3,1,3);
-//     H(2,1) = matrix_elem(2,3,1,4);
-//     H(2,2) = matrix_elem(2,3,2,3);
-//     H(2,3) = matrix_elem(2,3,2,4);
-    
-//     H(3,0) = matrix_elem(2,4,1,3);
-//     H(3,1) = matrix_elem(2,4,1,4);
-//     H(3,2) = matrix_elem(2,4,2,3);
-//     H(3,3) = matrix_elem(2,4,2,4);
-
-//     cout << H.real() << endl;
-//     exit(3);
-
-//     ComplexEigenSolver <MatrixXcd> ces;
-//     ces.compute(H);
-//     cout << ces.eigenvalues()<< endl;
-
-// }
