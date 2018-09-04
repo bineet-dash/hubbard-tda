@@ -23,6 +23,32 @@ inline double del(int a1, int a2){return (a1==a2)?1:0;}
 inline cd jn(cd z){return conj(z);}
 inline pair<int,int> mi(int index){return make_pair(int(index/L), index%L+L);}
 
+#define IA 16807
+#define IM 2147483647
+#define AM (1.0/IM)
+#define IQ 127773
+#define IR 2836
+#define MASK 123459876
+double ran0(long *idum)
+{
+   long  k;
+   double ans;
+
+   *idum ^= MASK;
+   k = (*idum)/IQ;
+   *idum = IA*(*idum - k*IQ) - IR*k;
+   if(*idum < 0) *idum += IM;
+   ans=AM*(*idum);
+   *idum ^= MASK;
+   return ans;
+}
+#undef IA
+#undef IM
+#undef AM
+#undef IQ
+#undef IR
+#undef MASK
+
 bool diagonalize(MatrixXcd& A, vector<double>& lambda, char eigenvec_choice='N')
 {
   int N = A.cols();
@@ -105,10 +131,9 @@ MatrixXcd matrixelement_sigmaz(MatrixXd randsigma)
 }
 
 
-cd matrix_elem(int i, int m, int j, int n)
+cd matrix_elem(int i, int m, int j, int n, double e_hf)
 {
-	cd res = 0;
-	// // res -= del(i,j)*del(m,n)*(h.sum());
+	cd res = del(i,j)*del(m,n)*e_hf;
 	for(int site=0; site<L; site++)
 	{
 		res -= 0.25*U_prime*sigma(site,2)*(-del(m,n)*conj(U(site,j))*U(site,i) + del(i,j)*conj(U(site,m))*U(site,n)+ del(i,j)*del(m,n)*U.row(site).squaredNorm());
@@ -136,6 +161,26 @@ cd matrix_elem(int i, int m, int j, int n)
 
 	res += interaction;
 	return res;
+}
+
+MatrixXcd construct_tda(double e_hf)
+{
+  MatrixXcd H_tda = MatrixXcd::Zero(L*L,L*L);
+  for(int it1=0; it1<H_tda.rows(); it1++)
+  {
+    for(int it2=0; it2<H_tda.cols(); it2++)
+      H_tda(it1,it2) = matrix_elem(mi(it1).first,mi(it1).second, mi(it2).first, mi(it2).second, e_hf);
+  }
+  return H_tda;
+}
+
+double tda_free_energy(VectorXd tda_eivals, double e_hf, double temperature)
+{
+	// Z = exp(-beta*e_min)*(1+\sum_e exp(-beta*(e-e_min)))
+	double Z = 1.00;
+	for(int it=0; it< tda_eivals.size(); it++) Z += exp(-(tda_eivals(it)-e_hf)/temperature);
+	Z *= exp(-e_hf/temperature);
+	return -temperature*log(Z);
 }
 
 double get_mu(double temperature, std::vector<double> v)
@@ -170,5 +215,33 @@ double get_mu(double temperature, std::vector<double> v)
     {bisection_low_lim=mu;}
   }
 }
+
+string current_time_str(void)
+{
+  time_t rawtime;
+  struct tm * timeinfo;
+  char buffer[80];
+  time (&rawtime);
+  timeinfo = localtime(&rawtime);
+  strftime(buffer,sizeof(buffer),"%S-%M-%I-%Y-%m-%d",timeinfo);
+  string str(buffer);
+  return str;
+}
+
+void spinarrangement_Mathematica_output(MatrixXd M, ofstream& fout)
+{
+  double lattice_separation = 1.0;
+  // cout << "Enter lattice separation (a): ";
+  // cin >> lattice_separation;
+
+  fout << "Show[Graphics3D[{" << endl;
+  for(int i=0; i< M.rows(); i++)
+  {
+    fout << "Arrow[{{" << lattice_separation*i << ", 0, 0}, {" << M(i,0)+lattice_separation*i << ","  << M(i,1) << "," << M(i,2) << "}}]";
+    if(i!=M.rows()-1) fout << ",\n";
+  }
+  fout <<"}] ]" << endl << endl;
+}
+
 
 #endif
