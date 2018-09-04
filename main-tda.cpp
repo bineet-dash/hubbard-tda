@@ -1,4 +1,5 @@
 #include "tda.hpp"
+#include <cstring>
 
 double t=1; 
 double U_prime=2;
@@ -6,49 +7,48 @@ int L=2;
 MatrixXd sigma;
 MatrixXcd U;
 
-inline pair<int,int> mi(int index)
+int main(int argc, char* argv[])
 {
-   switch (index)
-   {
-      case 0:
-         return make_pair(0,2);
-         break;
-      case 1:
-         return make_pair(0,3);
-         break;
-      case 2:
-         return make_pair(1,2);
-         break;
-      case 3:
-         return make_pair(1,3);
-   
-      default:
-         exit(3);
-         break;
-   }
-}
+   if(argc!=2) exit(1);
 
-int main()
-{
    sigma = MatrixXd::Zero(L,3);
-   
-   int sigma1, sigma2;
-   cin >> sigma1 >> sigma2;
-   sigma(0,2) = sigma1; sigma(1,2) = sigma2;
+   ofstream Zout;
+   ofstream Fout;
+
+   if(!strcmp(argv[1],"anti"))
+   {
+      for(int i=0; i<L; i++) sigma(i,2) = pow(-1,i);
+      Zout.open("Z_1-1.dat");
+      Fout.open("F_1-1.dat");
+   }
+   else if(!strcmp(argv[1],"ferro"))
+   {
+      for(int i=0; i<L; i++) sigma(i,2) = 1;//pow(-1,i);
+      Zout.open("Z_11.dat");
+      Fout.open("F_11.dat");
+   }
+   else 
+   {
+      cout << "invalid option" << endl;
+      exit(1);
+   }
+
 
    MatrixXcd H_spa = construct_h0() - U_prime/2*matrixelement_sigmaz(sigma);
    VectorXd hf_eivals= Eigenvalues(H_spa);
    vector <double> hf_vector_eivals(hf_eivals.data(), hf_eivals.data()+hf_eivals.size()); 
-   cout << "SPA:" << endl <<  H_spa << endl << endl << hf_eivals.transpose() << endl;// << Eigenvectors(H_spa) << endl << endl;
+   // cout << "SPA:" << endl <<  H_spa << endl << endl;
+   cout << hf_eivals.transpose() << endl << endl;// << Eigenvectors(H_spa) << endl << endl;
 
+   double E_HF = hf_eivals(0)+hf_eivals(1);
    U = Eigenvectors(H_spa);
-   if(sigma1==1 && sigma2==1)
+/*    if(sigma(0,2)==1 && sigma(1,2)==1)
    {
       MatrixXcd temp_U = U;
       U.col(1) = U.col(2);
       U.col(2) = temp_U.col(1);
-   }
-   cout << U << endl << endl;
+   } */
+//    cout << U << endl << endl;
 
    MatrixXcd H_tda = MatrixXcd::Zero(L*L,L*L);
    for(int it1=0; it1<L*L; it1++)
@@ -57,16 +57,12 @@ int main()
          H_tda(it1,it2) = matrix_elem(mi(it1).first,mi(it1).second, mi(it2).first, mi(it2).second);
    }
 
-   cout << "TDA \n" << H_tda << endl<< endl;
+   // cout << "TDA \n" << H_tda << endl<< endl;
    VectorXd tda_eivals = Eigenvalues(H_tda);
-   double E_HF = hf_eivals(0)+hf_eivals(1);
    tda_eivals.array() += E_HF;
    cout << tda_eivals.transpose() << endl;
    vector <double> tda_vector_eivals(tda_eivals.data(), tda_eivals.data()+tda_eivals.size());   
    tda_vector_eivals.push_back(E_HF);
-
-   ofstream Zout("Z_1-1.dat");
-   ofstream Fout("F_1-1.dat");
 
    for(double temperature = 10.00; temperature >= 0.001; temperature-=0.001)
    {

@@ -21,6 +21,7 @@ extern MatrixXcd U;
 
 inline double del(int a1, int a2){return (a1==a2)?1:0;}
 inline cd jn(cd z){return conj(z);}
+inline pair<int,int> mi(int index){return make_pair(int(index/L), index%L+L);}
 
 bool diagonalize(MatrixXcd& A, vector<double>& lambda, char eigenvec_choice='N')
 {
