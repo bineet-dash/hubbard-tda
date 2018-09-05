@@ -1,6 +1,7 @@
 #include "tda.hpp"
 #include <cstring>
 #include <chrono>
+#include <cstdlib>
 
 double t=1; 
 double U_prime=2;
@@ -17,10 +18,13 @@ void greens_sigma_generate(MatrixXd& suggested_sigma, int lattice_index, long & 
   if(ran0(&idum)<=0.5) suggested_sigma(lattice_index,2) *= -1;
 }
 
-
 int main(int argc, char* argv[])
 {
-  int no_sweeps = 200;
+  if(argc!=2) {cerr << "Enter the no of sweeps.\n"; exit(1);}
+  int no_sweeps = atoi(argv[1]);
+  int N_therm = 0.5*no_sweeps;
+  int N_meas = no_sweeps-N_therm;
+
   int initial_exp = -2;
   int final_exp = -1;
   double final_temp = 10*pow(10,final_exp);
@@ -55,7 +59,7 @@ int main(int argc, char* argv[])
     for(double i=10; i>=2; i-=1)
     {
       double temperature = i*pow(10,j);
-      for(int sweep=0; sweep<0.5*no_sweeps; sweep++)
+      for(int sweep=0; sweep<N_therm; sweep++)
       {
         for(int lattice_index=0; lattice_index<L; lattice_index++)
         {
@@ -86,9 +90,9 @@ int main(int argc, char* argv[])
 
       double final_free_energy = 0.0;
       double magnetisation = 0.0;
-      int count = 0;
+      double S_pi = 0.0;
 
-      for(int sweep= int(0.5*no_sweeps); sweep<no_sweeps; sweep++)
+      for(int sweep= N_therm; sweep<no_sweeps; sweep++)
       {
         for(int lattice_index=0; lattice_index<L; lattice_index++)
         {
@@ -115,16 +119,24 @@ int main(int argc, char* argv[])
           }
         }
         final_free_energy += free_energy; 
-        magnetisation += sigma.col(2).mean();
-        count++;
+        magnetisation += sigma.col(2).sum();
+
+        double sq = 0.0;
+        for(int i=0; i<L; i++)
+        {
+          for(int j=0; j<L; j++)
+          {
+            sq += sigma(i)*sigma(j)*pow(-1,i-j)/pow(L,2);
+          }
+        }
+        S_pi += sq;
         cout << "\r sweep = " << sweep << " done."; cout.flush();
       }
 
       outfile_mlength << temperature <<  " " << sigma.col(2).transpose() << endl;
-      outfile_freeenergy << temperature << " " << final_free_energy/double(count) << " " << magnetisation << endl;
+      outfile_freeenergy << temperature << " " << final_free_energy/double(N_meas) << " " << magnetisation/double(N_meas) << " " << S_pi/double(N_meas) << endl;
 
       cout << "\rtemperature = " << temperature << " done."; cout.flush();
-      // progress_percent_desc(initial_temp, final_temp, temperature);
     }
   }
 
