@@ -20,9 +20,9 @@ void greens_sigma_generate(MatrixXd& suggested_sigma, int lattice_index, long & 
 
 int main(int argc, char* argv[])
 {
-  int no_sweeps = 200;
-  int initial_exp = -2;
-  int final_exp = -1;
+  int no_sweeps = 5000;
+  int initial_exp = -3;
+  int final_exp = 0;
   double final_temp = 10*pow(10,final_exp);
   milliseconds begin_ms, end_ms;
   long idum = time(NULL);
