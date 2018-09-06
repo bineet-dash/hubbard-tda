@@ -22,6 +22,7 @@ extern MatrixXcd U;
 inline double del(int a1, int a2){return (a1==a2)?1:0;}
 inline cd jn(cd z){return conj(z);}
 inline pair<int,int> mi(int index){return make_pair(int(index/L), index%L+L);}
+inline double Sqr(double x){return x*x;}
 
 #define IA 16807
 #define IM 2147483647
@@ -177,10 +178,9 @@ MatrixXcd construct_tda(double e_hf)
 double tda_free_energy(VectorXd tda_eivals, double e_hf, double temperature)
 {
 	// Z = exp(-beta*e_min)*(1+\sum_e exp(-beta*(e-e_min)))
-	double Z = 1.00;
-	for(int it=0; it< tda_eivals.size(); it++) Z += exp(-(tda_eivals(it)-e_hf)/temperature);
-	Z *= exp(-e_hf/temperature);
-	return -temperature*log(Z);
+	double Z_rest = 1.00;
+	for(int it=0; it< tda_eivals.size(); it++) Z_rest += exp(-(tda_eivals(it)-e_hf)/temperature);
+	return e_hf-temperature*log(Z_rest);
 }
 
 double get_mu(double temperature, std::vector<double> v)
@@ -215,6 +215,33 @@ double get_mu(double temperature, std::vector<double> v)
     {bisection_low_lim=mu;}
   }
 }
+
+double get_mu(double temperature, VectorXd v)
+{
+  vector<double> stdv (v.data(),v.data()+v.size());
+  return get_mu(temperature, stdv);
+}
+
+double spa_free_energy(MatrixXcd Mc, double temperature, MatrixXd randsigma)
+{
+  std::vector<double> eigenvalues;
+  diagonalize(Mc, eigenvalues);
+  sort(eigenvalues.begin(),eigenvalues.end());
+
+  double free_energy = 0; double ekt =0;
+  double mu = get_mu(temperature, eigenvalues);
+
+  for(auto it=eigenvalues.begin(); it!= eigenvalues.end(); it++)
+  {
+    ekt = (*it-mu)/temperature;
+    if(!isinf(exp(-ekt))) free_energy += -temperature*log(1+exp(-ekt));
+    else  free_energy += (*it-mu);
+  }
+
+  free_energy += U_prime/4*randsigma.unaryExpr(&Sqr).sum();
+  return free_energy;
+}
+
 
 string current_time_str(void)
 {

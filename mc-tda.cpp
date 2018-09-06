@@ -5,7 +5,7 @@
 
 double t=1; 
 double U_prime=2;
-int L=4;
+int L=8;
 MatrixXd sigma;
 MatrixXcd U;
 
@@ -25,8 +25,8 @@ int main(int argc, char* argv[])
   int N_therm = 0.5*no_sweeps;
   int N_meas = no_sweeps-N_therm;
 
-  int initial_exp = -2;
-  int final_exp = -1;
+  int initial_exp = -3;
+  int final_exp = 0;
   double final_temp = 10*pow(10,final_exp);
   milliseconds begin_ms, end_ms;
   long idum = time(NULL);
@@ -47,10 +47,10 @@ int main(int argc, char* argv[])
 
   string filename, latticedata;
   latticedata = "_U="+to_string(int(U_prime))+"_size="+to_string(L)+"_sweeps="+to_string(no_sweeps);
-  filename="data/spin_arrangement"+current_time_str()+latticedata+".nb"; ofstream outfile_spinarr(filename);
-  spinarrangement_Mathematica_output(sigma,outfile_spinarr);
-  filename="data/m_length_vs_temp"+ current_time_str()+latticedata+".txt"; ofstream outfile_mlength(filename);
-  filename="data/tda_results"+current_time_str()+latticedata+".txt"; ofstream outfile_freeenergy(filename);
+  // filename="data/spin_arrangement"+current_time_str()+latticedata+".nb"; ofstream outfile_spinarr(filename);
+  // spinarrangement_Mathematica_output(sigma,outfile_spinarr);
+  filename="data/m_length_tda_"+ current_time_str()+latticedata+".txt"; ofstream outfile_mlength(filename);
+  filename="data/tda_results_"+current_time_str()+latticedata+".txt"; ofstream outfile_freeenergy(filename);
   // filename="data/mcdetails"+current_time_str()+latticedata+".txt"; ofstream outfile_mcdetails(filename);
   cout << "==============================\n"<< "filename is: " << filename << "\n========================\n";
 
@@ -126,7 +126,7 @@ int main(int argc, char* argv[])
         {
           for(int j=0; j<L; j++)
           {
-            sq += sigma(i)*sigma(j)*pow(-1,i-j)/pow(L,2);
+            sq += sigma(i,2)*sigma(j,2)*pow(-1,i-j)/pow(L,2);
           }
         }
         S_pi += sq;
@@ -143,11 +143,11 @@ int main(int argc, char* argv[])
   cout << endl;
   end_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
   // show_time(begin_ms, end_ms,"MC calculation");
-  spinarrangement_Mathematica_output(sigma,outfile_spinarr);
+  // spinarrangement_Mathematica_output(sigma,outfile_spinarr);
+  // outfile_spinarr.close();
 
   // outfile_mcdetails.close();
   outfile_mlength.close();
   outfile_freeenergy.close();
-  outfile_spinarr.close();
   return 0;
 }
