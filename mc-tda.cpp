@@ -3,9 +3,9 @@
 #include <chrono>
 #include <cstdlib>
 
-double t=1; 
+double t=1;
 double U_prime=2;
-int L=8;
+int L=4;
 MatrixXd sigma;
 MatrixXcd U;
 
@@ -20,8 +20,9 @@ void greens_sigma_generate(MatrixXd& suggested_sigma, int lattice_index, long & 
 
 int main(int argc, char* argv[])
 {
-  if(argc!=2) {cerr << "Enter the no of sweeps.\n"; exit(1);}
-  int no_sweeps = atoi(argv[1]);
+  if(argc!=3) {cerr << "Enter L and the no of sweeps.\n"; exit(1);}
+  L = atoi(argv[1]);
+  int no_sweeps = atoi(argv[2]);
   int N_therm = 0.5*no_sweeps;
   int N_meas = no_sweeps-N_therm;
 
@@ -85,7 +86,7 @@ int main(int argc, char* argv[])
             U = original_U;
           }
         }
-        cout << "\r sweep = " << sweep << " done."; cout.flush();
+        // cout << "\r sweep = " << sweep << " done."; cout.flush();
       }
 
       double final_free_energy = 0.0;
@@ -136,7 +137,7 @@ int main(int argc, char* argv[])
       outfile_mlength << temperature <<  " " << sigma.col(2).transpose() << endl;
       outfile_freeenergy << temperature << " " << final_free_energy/double(N_meas) << " " << magnetisation/double(N_meas) << " " << S_pi/double(N_meas) << endl;
 
-      cout << "\rtemperature = " << temperature << " done."; cout.flush();
+      // cout << "\rtemperature = " << temperature << " done."; cout.flush();
     }
   }
 

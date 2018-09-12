@@ -72,9 +72,15 @@ bool diagonalize(MatrixXcd& A, vector<double>& lambda, char eigenvec_choice='N')
   return INFO==0;
 }
 
+vector <double> stdEigenvalues(MatrixXcd A)
+{
+  std::vector<double> lambda; 
+  if(diagonalize(A,lambda,'N')) return lambda;
+}
+
 VectorXd Eigenvalues(MatrixXcd A)
 {
-  std::vector<double> lambda; MatrixXcd eigenvec;
+  std::vector<double> lambda;
   if(diagonalize(A,lambda,'N'))
  	{
 		Map<ArrayXd> b(lambda.data(),lambda.size());
@@ -85,8 +91,23 @@ VectorXd Eigenvalues(MatrixXcd A)
 MatrixXcd Eigenvectors(MatrixXcd A)
 {
 	std::vector<double> lambda;
+  if(diagonalize(A,lambda,'V')) return A; 
+}
+
+pair<MatrixXcd, vector<double>> stdEigenspectrum(MatrixXcd A)
+{
+  std::vector<double> lambda;
+  if(diagonalize(A,lambda,'V')) return make_pair(A,lambda);
+}
+
+pair<MatrixXcd, VectorXd> Eigenspectrum(MatrixXcd A)
+{
+  std::vector<double> lambda;
   if(diagonalize(A,lambda,'V'))
-		return A; 
+ 	{
+    Map<ArrayXd> b(lambda.data(),lambda.size());
+    return make_pair(A,b);
+	}
 }
 
 MatrixXcd construct_h0(void)
@@ -131,6 +152,18 @@ MatrixXcd matrixelement_sigmaz(MatrixXd randsigma)
 	return Mcz;
 }
 
+// cd matrix_elem_optimized(int i, int m, int j, int n, double e_hf)
+// {
+//   cd res = del(i,j)*del(m,n)*e_hf;
+//   if(m==n)
+//   {
+//     for(int site=0; site<L; site++)
+//     {
+//       res += 0.25*U_prime*sigma(site,2)*conj(U(site,j))*U(site,i) - 0.25*U_prime*sigma(site,2)*conj(U(site+L,j))*U(site,i);
+//     }
+//   }
+
+// }
 
 cd matrix_elem(int i, int m, int j, int n, double e_hf)
 {
@@ -157,7 +190,7 @@ cd matrix_elem(int i, int m, int j, int n, double e_hf)
 		cd temp3 = conj(U(site,m))*U(site,i)*conj(U(site+L,j))*U(site+L,n) + del(m,n)*U.row(site+L).dot(U.row(site))*U(site,i)*conj(U(site+L,j))
 						-conj(U(site,j))*U(site,i)*conj(U(site+L,m))*U(site+L,n) - del(m,n)*conj(U(site,j))*U(site,i)*U.row(site+L).squaredNorm();
 		
-		interaction += U_prime*del(i,j)*temp1+ temp2 +temp3;
+		interaction += U_prime*(del(i,j)*temp1+ temp2 +temp3);
 	}
 
 	res += interaction;
@@ -171,6 +204,18 @@ MatrixXcd construct_tda(double e_hf)
   {
     for(int it2=0; it2<H_tda.cols(); it2++)
       H_tda(it1,it2) = matrix_elem(mi(it1).first,mi(it1).second, mi(it2).first, mi(it2).second, e_hf);
+  }
+  return H_tda;
+}
+
+MatrixXcd construct_truncated_tda(vector <pair<int,int>> excitations, double e_hf)
+{
+  int N = excitations.size();
+  MatrixXcd H_tda = MatrixXcd::Zero(N, N);
+  for(int it1=0; it1<H_tda.rows(); it1++)
+  {
+    for(int it2=0; it2<H_tda.cols(); it2++)
+      H_tda(it1,it2) = matrix_elem(excitations[it1].first, excitations[it1].second, excitations[it2].first, excitations[it2].second, e_hf);
   }
   return H_tda;
 }
