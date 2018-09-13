@@ -152,18 +152,45 @@ MatrixXcd matrixelement_sigmaz(MatrixXd randsigma)
 	return Mcz;
 }
 
-// cd matrix_elem_optimized(int i, int m, int j, int n, double e_hf)
-// {
-//   cd res = del(i,j)*del(m,n)*e_hf;
-//   if(m==n)
-//   {
-//     for(int site=0; site<L; site++)
-//     {
-//       res += 0.25*U_prime*sigma(site,2)*conj(U(site,j))*U(site,i) - 0.25*U_prime*sigma(site,2)*conj(U(site+L,j))*U(site,i);
-//     }
-//   }
+cd matrix_elem_optimized(int i, int m, int j, int n, double e_hf)
+{
+  cd res = del(i,j)*del(m,n)*e_hf;
+  for(int site=0; site<L; site++)
+  {
+    res += U_prime*(conj(U(site,m))*U(site,n)*conj(U(site+L,j))*U(site+L,i)+ conj(U(site,j))*U(site,n)*conj(U(site+L,m))*U(site+L,i))
+          + conj(U(site,m))*U(site,i)*conj(U(site+L,j))*U(site+L,n)-conj(U(site,j))*U(site,i)*conj(U(site+L,m))*U(site+L,n);
+  }
 
-// }
+  if(m==n)
+  {
+    for(int site=0; site<L; site++)
+    {
+      res += 0.25*U_prime*sigma(site,2)*conj(U(site,j))*U(site,i) - 0.25*U_prime*sigma(site,2)*conj(U(site+L,j))*U(site,i)
+            + U_prime*(-U.row(site).squaredNorm()*conj(U(site+L,j))*U(site+L,i)- conj(U(site,j))*U(site+L,i)*U.row(site).dot(U.row(site+L))
+            + U.row(site+L).dot(U.row(site))*U(site,i)*conj(U(site+L,j))- conj(U(site,j))*U(site,i)*U.row(site+L).squaredNorm() );
+    }
+  }
+
+  if(i==j)
+  {
+    for(int site=0; site<L; site++)
+    {
+      res += -0.25*U_prime*sigma(site,2)*conj(U(site,m))*U(site,n) + 0.25*U_prime*sigma(site,2)*conj(U(site+L,m))*U(site+L,n)
+            + U_prime*( conj(U(site,m))*U.row(site).dot(U.row(site+L))*U(site+L,n) - conj(U(site,m))*U(site,n)*U.row(site+L).squaredNorm() 
+						+ conj(U(site+L,m))*U(site+L,n)*U.row(site).squaredNorm() - conj(U(site+L,m))*U(site,n)*U.row(site+L).dot(U.row(site)) );
+    }
+  }
+
+  if(m==n && i==j)
+  {
+    for(int site=0; site<L; site++)
+    {
+      res += U_prime*(U.row(site).squaredNorm()*U.row(site+L).squaredNorm() - U.row(site+L).dot(U.row(site))*U.row(site).dot(U.row(site+L)))
+            + 0.25*U_prime*sigma(site,2)*(U.row(site+L).squaredNorm()-U.row(site).squaredNorm()); 
+    }
+  }
+  return res;
+}
 
 cd matrix_elem(int i, int m, int j, int n, double e_hf)
 {
@@ -174,7 +201,7 @@ cd matrix_elem(int i, int m, int j, int n, double e_hf)
 	}
 	for(int site=0; site<L; site++)
 	{
-		res += 0.25*U_prime*sigma(site,2)*(-del(m,n)*conj(U(site+L,j))*U(site+L,i) + del(i,j)*conj(U(site+L,m))*U(site+L,n)+ del(i,j)*del(m,n)*U.row(site).squaredNorm());
+		res += 0.25*U_prime*sigma(site,2)*(-del(m,n)*conj(U(site+L,j))*U(site+L,i) + del(i,j)*conj(U(site+L,m))*U(site+L,n)+ del(i,j)*del(m,n)*U.row(site+L).squaredNorm());
 	}
 
 	cd interaction = 0; 
@@ -197,6 +224,22 @@ cd matrix_elem(int i, int m, int j, int n, double e_hf)
 	return res;
 }
 
+MatrixXcd construct_truncated_tda(vector <pair<int,int>> excitations, double e_hf)
+{
+  int N = excitations.size();
+
+  MatrixXcd H_tda = MatrixXcd::Zero(N, N);
+  for(int it1=0; it1<H_tda.rows(); it1++)
+  {
+    for(int it2=0; it2<H_tda.cols(); it2++)
+    { 
+      cd hij= matrix_elem_optimized(excitations[it1].first, excitations[it1].second, excitations[it2].first, excitations[it2].second, e_hf);
+      H_tda(it1,it2) = hij; 
+    }
+  }
+  return H_tda;
+}
+
 MatrixXcd construct_tda(double e_hf)
 {
   MatrixXcd H_tda = MatrixXcd::Zero(L*L,L*L);
@@ -208,17 +251,6 @@ MatrixXcd construct_tda(double e_hf)
   return H_tda;
 }
 
-MatrixXcd construct_truncated_tda(vector <pair<int,int>> excitations, double e_hf)
-{
-  int N = excitations.size();
-  MatrixXcd H_tda = MatrixXcd::Zero(N, N);
-  for(int it1=0; it1<H_tda.rows(); it1++)
-  {
-    for(int it2=0; it2<H_tda.cols(); it2++)
-      H_tda(it1,it2) = matrix_elem(excitations[it1].first, excitations[it1].second, excitations[it2].first, excitations[it2].second, e_hf);
-  }
-  return H_tda;
-}
 
 double tda_free_energy(VectorXd tda_eivals, double e_hf, double temperature)
 {

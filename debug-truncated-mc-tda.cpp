@@ -6,7 +6,7 @@
 double t=1; 
 double U_prime=4;
 int L=8;
-double DELTA;
+double DELTA = 2.0;
 MatrixXd sigma;
 MatrixXcd U;
 
@@ -38,14 +38,11 @@ void greens_sigma_generate(MatrixXd& suggested_sigma, int lattice_index, long & 
 
 int main(int argc, char* argv[])
 {
-  if(argc!=4) {cerr << "Enter (1) lattice size, (2) U and (3) no of sweeps.\n"; exit(1);}
+  if(argc!=3) {cerr << "Enter (1) lattice size, (2) no of sweeps.\n"; exit(1);}
   L = atoi(argv[1]);
-  DELTA = U_prime/2+1;
-  int no_sweeps = atoi(argv[3]);
+  int no_sweeps = atoi(argv[2]);
   int N_therm = 0.5*no_sweeps;
   int N_meas = no_sweeps-N_therm;
-
-  cerr << L << " " << U_prime << " " << no_sweeps << endl;
 
   int initial_exp = -3;
   int final_exp = 0;
@@ -65,14 +62,18 @@ int main(int argc, char* argv[])
   U = spa_spectrum.first;
   vector <pair<int,int>> s = select_excitations(spa_spectrum.second,DELTA);
   MatrixXcd H_tda = construct_truncated_tda(s, E_HF);
-  VectorXd Htda_eivals = Eigenvalues(H_tda); 
+  VectorXd Htda_eivals = Eigenvalues(H_spa);
   double free_energy = tda_free_energy(Htda_eivals,E_HF, final_temp);
 
   string filename, latticedata;
   latticedata = "_U="+to_string(int(U_prime))+"_size="+to_string(L)+"_sweeps="+to_string(no_sweeps)+"_delta="+to_string(int(DELTA));
-  filename="truncated/m_length_trunctda_"+ current_time_str()+latticedata+".txt"; ofstream outfile_mlength(filename);
-  filename="truncated/trunctda_results_"+current_time_str()+latticedata+".txt"; ofstream outfile_freeenergy(filename);
-  cout << "==============================\n"<< "filename is: " << filename << "\n========================\n";
+  filename="truncated/m_length_trunctda_"+ current_time_str()+latticedata+".txt"; ofstream outfile_mlength;//(filename);
+  filename="truncated/trunctda_results_"+current_time_str()+latticedata+".txt"; ofstream outfile_freeenergy;//(filename);
+  // cout << "==============================\n"<< "filename is: " << filename << "\n========================\n";
+
+    auto begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count();
+    cout << begin_ms << endl << endl;
+
 
   for(int j=final_exp; j>=initial_exp; j--)
   {
@@ -83,19 +84,31 @@ int main(int argc, char* argv[])
       {
         for(int lattice_index=0; lattice_index<L; lattice_index++)
         {
+             cout << duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count()-begin_ms << endl;
+
           greens_sigma_generate(suggested_sigma,lattice_index, idum);
           MatrixXcd suggested_Hspa = H0-U_prime/2*matrixelement_sigmaz(suggested_sigma);
           for(int it=0; it<H_spa.rows(); it++) suggested_Hspa(it,it) += ran0(&idum)*0.02-0.01;
+             cout << duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count()-begin_ms << endl;
 
-          pair<MatrixXcd,vector<double>> suggested_spa_spectrum = stdEigenspectrum(suggested_Hspa);           
+          pair<MatrixXcd,vector<double>> suggested_spa_spectrum = stdEigenspectrum(suggested_Hspa);
+             cout << duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count()-begin_ms << endl;
+  
           double suggested_E_HF = gs_energy(suggested_spa_spectrum.second); 
           MatrixXcd original_U = U;
           U = suggested_spa_spectrum.first;
-             
-          vector <pair<int,int>> s = select_excitations(suggested_spa_spectrum.second,DELTA);              
-          MatrixXcd suggested_Htda = construct_truncated_tda(s, E_HF);            
+             cout << duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count()-begin_ms << endl;
+
+          vector <pair<int,int>> s = select_excitations(suggested_spa_spectrum.second,DELTA);
+              cout << "size=" << s.size() << endl;
+              cout << duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count()-begin_ms << endl;
+
+          MatrixXcd suggested_Htda = construct_truncated_tda(s, E_HF);
+              cout << duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count()-begin_ms << endl;
+
           VectorXd suggested_Htda_eivals = Eigenvalues(suggested_Htda);
-          double suggested_free_energy = tda_free_energy(suggested_Htda_eivals,suggested_E_HF, temperature);            
+          double suggested_free_energy = tda_free_energy(suggested_Htda_eivals,suggested_E_HF, temperature);
+              cout << duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count()-begin_ms << endl;
 
           double uniform_rv = ran0(&idum); double move_prob = exp((free_energy - suggested_free_energy)/temperature);
           if(uniform_rv <= move_prob)
@@ -108,7 +121,8 @@ int main(int argc, char* argv[])
             suggested_sigma=sigma;
             U = original_U;
           }
-              
+              cout << duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count()-begin_ms << endl;
+              exit(1);
 
         }
         cout << "\r sweep = " << sweep << " done."; cout.flush();
