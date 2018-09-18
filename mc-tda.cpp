@@ -11,8 +11,6 @@ MatrixXcd U;
 
 using namespace std::chrono;
 
-inline double gs_energy(VectorXd hf_eivals) {return hf_eivals.block(0,0,hf_eivals.size()/2,1).sum();}
-
 void greens_sigma_generate(MatrixXd& suggested_sigma, int lattice_index, long & idum)
 {
   if(ran0(&idum)<=0.5) suggested_sigma(lattice_index,2) *= -1;
@@ -20,9 +18,10 @@ void greens_sigma_generate(MatrixXd& suggested_sigma, int lattice_index, long & 
 
 int main(int argc, char* argv[])
 {
-  if(argc!=3) {cerr << "Enter L and the no of sweeps.\n"; exit(1);}
+  if(argc!=4) {cerr << "Enter (1) lattice size, (2) U and (3) no of sweeps.\n"; exit(1);}
   L = atoi(argv[1]);
-  int no_sweeps = atoi(argv[2]);
+  U_prime = atof(argv[2]);
+  int no_sweeps = atoi(argv[3]);
   int N_therm = 0.5*no_sweeps;
   int N_meas = no_sweeps-N_therm;
 
@@ -41,10 +40,12 @@ int main(int argc, char* argv[])
   MatrixXcd H_spa = H0 - U_prime/2*matrixelement_sigmaz(sigma);
   for(int it=0; it<H_spa.rows(); it++) H_spa(it,it) += ran0(&idum)*0.02-0.01;
 
-  double E_HF = gs_energy(Eigenvalues(H_spa)); 
-  U = Eigenvectors(H_spa);
+  pair<MatrixXcd,vector<double>> spa_spectrum = stdEigenspectrum(H_spa);
+  double E_HF = gs_energy(spa_spectrum.second); 
+  U = spa_spectrum.first;
   MatrixXcd H_tda = construct_tda(E_HF);
-  double free_energy = tda_free_energy(Eigenvalues(H_tda),E_HF, final_temp);
+  VectorXd Htda_eivals = Eigenvalues(H_tda); 
+  double free_energy = tda_free_energy(Htda_eivals,E_HF, final_temp);
 
   string filename, latticedata;
   latticedata = "_U="+to_string(int(U_prime))+"_size="+to_string(L)+"_sweeps="+to_string(no_sweeps);
@@ -68,11 +69,14 @@ int main(int argc, char* argv[])
           MatrixXcd suggested_Hspa = H0-U_prime/2*matrixelement_sigmaz(suggested_sigma);
           for(int it=0; it<H_spa.rows(); it++) suggested_Hspa(it,it) += ran0(&idum)*0.02-0.01;
 
-          double suggested_E_HF = gs_energy(Eigenvalues(suggested_Hspa)); 
+          pair<MatrixXcd,vector<double>> suggested_spa_spectrum = stdEigenspectrum(suggested_Hspa);           
+          double suggested_E_HF = gs_energy(suggested_spa_spectrum.second); 
           MatrixXcd original_U = U;
-          U = Eigenvectors(suggested_Hspa);
+          U = suggested_spa_spectrum.first;
+  
           MatrixXcd suggested_Htda = construct_tda(suggested_E_HF);
-          double suggested_free_energy = tda_free_energy(Eigenvalues(suggested_Htda),suggested_E_HF, temperature);
+          VectorXd suggested_Htda_eivals = Eigenvalues(suggested_Htda);
+          double suggested_free_energy = tda_free_energy(suggested_Htda_eivals,suggested_E_HF, temperature);            
 
           double uniform_rv = ran0(&idum); double move_prob = exp((free_energy - suggested_free_energy)/temperature);
           if(uniform_rv <= move_prob)
@@ -101,13 +105,17 @@ int main(int argc, char* argv[])
           MatrixXcd suggested_Hspa = H0-U_prime/2*matrixelement_sigmaz(suggested_sigma);
           for(int it=0; it<H_spa.rows(); it++) suggested_Hspa(it,it) += ran0(&idum)*0.02-0.01;
 
-          double suggested_E_HF = gs_energy(Eigenvalues(suggested_Hspa)); 
+          pair<MatrixXcd,vector<double>> suggested_spa_spectrum = stdEigenspectrum(suggested_Hspa);           
+          double suggested_E_HF = gs_energy(suggested_spa_spectrum.second); 
           MatrixXcd original_U = U;
-          U = Eigenvectors(suggested_Hspa);
+          U = suggested_spa_spectrum.first;
+  
           MatrixXcd suggested_Htda = construct_tda(suggested_E_HF);
-          double suggested_free_energy = tda_free_energy(Eigenvalues(suggested_Htda),suggested_E_HF, temperature);
+          VectorXd suggested_Htda_eivals = Eigenvalues(suggested_Htda);
+          double suggested_free_energy = tda_free_energy(suggested_Htda_eivals,suggested_E_HF, temperature);            
 
           double uniform_rv = ran0(&idum); double move_prob = exp((free_energy - suggested_free_energy)/temperature);
+          
           if(uniform_rv <= move_prob)
           {
             free_energy = suggested_free_energy;
