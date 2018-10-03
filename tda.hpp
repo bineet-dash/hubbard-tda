@@ -163,6 +163,20 @@ cd matrix_elem(int i, int m, int j, int n, double e_hf)
 	return res;
 }
 
+cd check_matrix_elem(int i, int m, int j, int n, double e_hf)
+{
+  cd v_spa = 0.0;
+  cd v_exact = 0.0;
+  for(int site=0; site <L; site++)
+  {
+    v_spa += U_prime/4*sigma(site,2)*(del(i,j)*(conj(U(site,m))*U(site,n)-conj(U(site+L,m))*U(site+L,n)) - del(m,n)*(conj(U(site,i))*U(site,j)-conj(U(site+L,i))*U(site+L,j)));
+    v_exact += U_prime*(del(i,j)*(conj(U(site,m))*U(site,n)+ conj(U(site+L,m))*U(site+L,n)) - del(m,n)*(conj(U(site,i))*U(site,j) + conj(U(site+L,i))*U(site+L,j))
+              + conj(U(site,m)*U(site+L,j))*U(site,n)*U(site+L,i) - conj(U(site,j)*U(site+L,m))*U(site,i)*U(site+L,n)
+              + 2.0*real(conj(U(site,j)*U(site+L,m))*U(site,n)*U(site+L,i))); 
+  }
+
+}
+
 MatrixXcd construct_tda(double e_hf)
 {
   MatrixXcd H_tda = MatrixXcd::Zero(L*L,L*L);

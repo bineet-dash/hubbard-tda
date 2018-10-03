@@ -126,7 +126,7 @@ int main(int argc, char* argv[])
         {
           for(int j=0; j<L; j++)
           {
-            sq += sigma(i)*sigma(j)*pow(-1,i-j)/pow(L,2);
+            sq += sigma(i,2)*sigma(j,2)*pow(-1,i-j)/pow(L,2);
           }
         }
         S_pi += sq;
