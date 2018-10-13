@@ -29,7 +29,6 @@ vector <pair<int,int>> select_excitations(vector <double> v, double delta)
   return excitations;
 }
 
-
 void greens_sigma_generate(MatrixXd& suggested_sigma, int lattice_index, long & idum)
 {
   if(ran0(&idum)<=0.5) suggested_sigma(lattice_index,2) *= -1;
@@ -62,8 +61,6 @@ vector <pair<int,int>> debug_select_excitations(vector <double> v, double delta,
 
   return excitations;
 }
-
-double filter(double x){return (abs(x)<1e-4)?0:x;}
 
 int main(int argc, char* argv[])
 {
