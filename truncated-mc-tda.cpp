@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
   if(argc!=4) {cerr << "Enter (1) lattice size, (2) U and (3) no of sweeps.\n"; exit(1);}
   L = atoi(argv[1]);
   U_prime = atof(argv[2]);
-  DELTA = U_prime/2+1;
+  DELTA = 5.0;
   int no_sweeps = atoi(argv[3]);
   int N_therm = 0.5*no_sweeps;
   int N_meas = no_sweeps-N_therm;
@@ -60,16 +60,13 @@ int main(int argc, char* argv[])
   // for(int it=0; it<H_spa.rows(); it++) H_spa(it,it) += ran0(&idum)*0.02-0.01;
   
   pair<MatrixXcd,vector<double>> spa_spectrum = stdEigenspectrum(H_spa);
-  double E_HF = gs_energy(spa_spectrum.second); 
+  double E_HF = gs_energy(spa_spectrum.second); //update this
   U = spa_spectrum.first;
   vector <pair<int,int>> s = select_excitations(spa_spectrum.second,DELTA);
   MatrixXcd H_tda = construct_truncated_tda(s, E_HF);
   VectorXd Htda_eivals = Eigenvalues(H_tda); 
   double free_energy = tda_free_energy(Htda_eivals,E_HF, final_temp);
   double internal_energy = tda_internal_energy(Htda_eivals, E_HF, final_temp);
-
-  // cout << Htda_eivals.transpose() << endl << endl << free_energy << endl; 
-  // exit(1);
 
   string filename, latticedata;
   latticedata = "_U="+to_string(int(U_prime))+"_size="+to_string(L)+"_sweeps="+to_string(no_sweeps)+"_delta="+to_string(int(DELTA));
@@ -126,6 +123,7 @@ int main(int argc, char* argv[])
 
       for(int sweep= N_therm; sweep<no_sweeps; sweep++)
       {
+         MatrixXcd suggested_Htda;
         for(int lattice_index=0; lattice_index<L; lattice_index++)
         {
           greens_sigma_generate(suggested_sigma,lattice_index, idum);
@@ -137,7 +135,7 @@ int main(int argc, char* argv[])
           MatrixXcd original_U = U;
           U = suggested_spa_spectrum.first;
           vector <pair<int,int>> s = select_excitations(suggested_spa_spectrum.second,DELTA);
-          MatrixXcd suggested_Htda = construct_truncated_tda(s, suggested_E_HF);
+          suggested_Htda = construct_truncated_tda(s, suggested_E_HF);
           VectorXd suggested_Htda_eivals = Eigenvalues(suggested_Htda);
           double suggested_free_energy = tda_free_energy(suggested_Htda_eivals,suggested_E_HF, temperature);
           double suggested_internal_energy = tda_internal_energy(suggested_Htda_eivals,suggested_E_HF, temperature);            

@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
   MatrixXcd Id = MatrixXcd::Identity(H0.rows(),H0.cols());
 
   MatrixXcd H_spa = H0 - U_prime/2*matrixelement_sigmaz(sigma);//+ U_prime/4*sigma.unaryExpr(&Sqr).sum()*Id;
-            cout << sigma << endl << endl << H_spa << endl << endl << Eigenvalues(H_spa).unaryExpr(&filter).transpose() << endl << endl; exit(1);
+            // cout << sigma << endl << endl << H_spa << endl << endl << Eigenvalues(H_spa).unaryExpr(&filter).transpose() << endl << endl; exit(1);
 
   // for(int it=0; it<H_spa.rows(); it++) H_spa(it,it) += ran0(&idum)*0.02-0.01;
   
@@ -132,11 +132,22 @@ int main(int argc, char* argv[])
           U = suggested_spa_spectrum.first;
             cout << duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count()-begin_ms << endl;
 
-          vector <pair<int,int>> selected_excitations = debug_select_excitations(suggested_spa_spectrum.second, DELTA, cout);              
+            cout.precision(3);
+            cout << "spa eigenvalues:\n" << Eigenvalues(suggested_Hspa).transpose() << endl << endl;
+            cout << U.real().unaryExpr(&filter) << endl << endl;
+
+          vector <pair<int,int>> selected_excitations = select_excitations(suggested_spa_spectrum.second, DELTA);              
             cout << duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count()-begin_ms << " "  <<  "s size = " << selected_excitations.size() <<  endl;
 
           MatrixXcd suggested_Htda = construct_truncated_tda(selected_excitations, suggested_E_HF);            
             cout << duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count()-begin_ms << " " <<  "Htda size = " << suggested_Htda.rows() <<  endl;
+
+            cout << "diagnosis started\n";
+            matrix_elem_optimized(0,4,0,4, suggested_E_HF,cout);
+            cout << "diagnosis ended\n\n";
+            
+            for(auto it=selected_excitations.begin(); it!= selected_excitations.end(); it++) cout << " (" << (*it).first << "," << (*it).second << ") " << " "; cout << endl;
+            cout << suggested_Htda.real().unaryExpr(&filter) << endl << endl;
 
           VectorXd suggested_Htda_eivals = Eigenvalues(suggested_Htda);
           double suggested_free_energy = tda_free_energy(suggested_Htda_eivals,suggested_E_HF, temperature);            

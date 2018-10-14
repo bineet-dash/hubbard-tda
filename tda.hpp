@@ -154,14 +154,24 @@ MatrixXcd matrixelement_sigmaz(MatrixXd randsigma)
 	return Mcz;
 }
 
-cd matrix_elem_optimized(int i, int m, int j, int n, double e_hf)
+ofstream nullout;
+cd matrix_elem_optimized(int i, int m, int j, int n, double e_hf, ostream& debugout=nullout)
 {
   cd res = del(i,j)*del(m,n)*(e_hf-L*U_prime*L/4);
+
+  debugout << res.real() << " -> \n";
+
+
   for(int site=0; site<L; site++)
   {
     res += U_prime*(conj(U(site,m))*U(site,n)*conj(U(site+L,j))*U(site+L,i)+ conj(U(site,j))*U(site,n)*conj(U(site+L,m))*U(site+L,i))
           + conj(U(site,m))*U(site,i)*conj(U(site+L,j))*U(site+L,n)-conj(U(site,j))*U(site,i)*conj(U(site+L,m))*U(site+L,n);
+
+    debugout << conj(U(site,m))*U(site,n)*conj(U(site+L,j))*U(site+L,i) << " " << conj(U(site,j))*U(site,n)*conj(U(site+L,m))*U(site+L,i) 
+            << " " << conj(U(site,m))*U(site,i)*conj(U(site+L,j))*U(site+L,n) << " " << -conj(U(site,j))*U(site,i)*conj(U(site+L,m))*U(site+L,n) << endl << endl;
   }
+
+  debugout << res.real() << " -> ";
 
   if(m==n)
   {
@@ -172,6 +182,7 @@ cd matrix_elem_optimized(int i, int m, int j, int n, double e_hf)
             + U.row(site+L).dot(U.row(site))*U(site,i)*conj(U(site+L,j))- conj(U(site,j))*U(site,i)*U.row(site+L).squaredNorm() );
     }
   }
+  debugout << res.real() << " -> ";
 
   if(i==j)
   {
@@ -182,6 +193,7 @@ cd matrix_elem_optimized(int i, int m, int j, int n, double e_hf)
 						+ conj(U(site+L,m))*U(site+L,n)*U.row(site).squaredNorm() - conj(U(site+L,m))*U(site,n)*U.row(site+L).dot(U.row(site)) );
     }
   }
+  debugout << res.real() << " -> ";
 
   if(m==n && i==j)
   {
@@ -191,6 +203,8 @@ cd matrix_elem_optimized(int i, int m, int j, int n, double e_hf)
             + 0.25*U_prime*sigma(site,2)*(U.row(site+L).squaredNorm()-U.row(site).squaredNorm()); 
     }
   }
+  debugout << res.real() << " -> ";
+
   return res;
 }
 

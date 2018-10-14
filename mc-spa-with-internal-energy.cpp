@@ -40,14 +40,14 @@ int main(int argc, char* argv[])
 
   MatrixXcd H_spa = H0 - U_prime/2*matrixelement_sigmaz(sigma) + U_prime/4*sigma.unaryExpr(&Sqr).sum()*Id; 
   // for(int it=0; it<H_spa.rows(); it++) H_spa(it,it) += ran0(&idum)*0.02-0.01;
-  double free_energy = spa_free_energy(H_spa, final_temp);
+  double internal_energy = spa_internal_energy(H_spa, final_temp);
 
   string filename, latticedata;
-  latticedata = "_U="+to_string(int(U_prime))+"_size="+to_string(L)+"_sweeps="+to_string(no_sweeps);
+  latticedata = "_U_"+to_string(int(U_prime))+"_size_"+to_string(L)+"_sweeps_"+to_string(no_sweeps);
   // filename="data/spin_arrangement"+current_time_str()+latticedata+".nb"; ofstream outfile_spinarr(filename);
   // spinarrangement_Mathematica_output(sigma,outfile_spinarr);
-  filename="spa/m_length_spa_"+ current_time_str()+latticedata+".dat"; ofstream outfile_mlength(filename);
-  filename="spa/spa_results_"+current_time_str()+latticedata+".dat"; ofstream outfile_results(filename);
+  filename="spa/m_length_spa_internal_energy"+ current_time_str()+latticedata+".dat"; ofstream outfile_mlength(filename);
+  filename="spa/spa_results_internal_energy_"+current_time_str()+latticedata+".dat"; ofstream outfile_results(filename);
   // filename="data/mcdetails"+current_time_str()+latticedata+".txt"; ofstream outfile_mcdetails(filename);
   cout << "==============================\n"<< "filename is: " << filename << "\n========================\n";
 
@@ -63,12 +63,12 @@ int main(int argc, char* argv[])
           greens_sigma_generate(suggested_sigma,lattice_index, idum);
           MatrixXcd suggested_Hspa = H0-U_prime/2*matrixelement_sigmaz(suggested_sigma)+U_prime/4*sigma.unaryExpr(&Sqr).sum()*Id;
           // for(int it=0; it<H_spa.rows(); it++) suggested_Hspa(it,it) += ran0(&idum)*0.02-0.01;
-          double suggested_free_energy = spa_free_energy(suggested_Hspa,temperature);
+          double suggested_internal_energy = spa_internal_energy(suggested_Hspa,temperature);
 
-          double uniform_rv = ran0(&idum); double move_prob = exp((free_energy - suggested_free_energy)/temperature);
+          double uniform_rv = ran0(&idum); double move_prob = exp((internal_energy - suggested_internal_energy)/temperature);
           if(uniform_rv <= move_prob)
           {
-            free_energy = suggested_free_energy;
+            internal_energy = suggested_internal_energy;
             sigma = suggested_sigma;
           }
           else
@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
         cout << "\r sweep = " << sweep << " done."; cout.flush();
       }
 
-      double final_free_energy = 0.0;
+      double final_internal_energy = 0.0;
       double magnetisation = 0.0;
       double S_pi = 0.0;
       double internal_energy = 0.0;
@@ -91,12 +91,12 @@ int main(int argc, char* argv[])
           greens_sigma_generate(suggested_sigma,lattice_index, idum);
           MatrixXcd suggested_Hspa = H0-U_prime/2*matrixelement_sigmaz(suggested_sigma) + U_prime/4*sigma.unaryExpr(&Sqr).sum()*Id;
           // for(int it=0; it<H_spa.rows(); it++) suggested_Hspa(it,it) += ran0(&idum)*0.02-0.01;
-          double suggested_free_energy = spa_free_energy(suggested_Hspa,temperature);
+          double suggested_internal_energy = spa_internal_energy(suggested_Hspa,temperature);
 
-          double uniform_rv = ran0(&idum); double move_prob = exp((free_energy - suggested_free_energy)/temperature);
+          double uniform_rv = ran0(&idum); double move_prob = exp((internal_energy - suggested_internal_energy)/temperature);
           if(uniform_rv <= move_prob)
           {
-            free_energy = suggested_free_energy;
+            internal_energy = suggested_internal_energy;
             sigma = suggested_sigma;
           }
           else
@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
         
         MatrixXcd H_spa_afterSweep = H0-U_prime/2*matrixelement_sigmaz(suggested_sigma) + U_prime/4*sigma.unaryExpr(&Sqr).sum()*Id;
         internal_energy += spa_internal_energy(H_spa_afterSweep,temperature)/L;
-        final_free_energy += free_energy/L; 
+        final_internal_energy += internal_energy/L; 
         magnetisation += sigma.col(2).mean();
 
         double sq = 0.0;
@@ -123,7 +123,7 @@ int main(int argc, char* argv[])
       }
 
       outfile_mlength << temperature <<  " " << sigma.col(2).transpose() << endl;
-      outfile_results << temperature << " " << final_free_energy/N_meas << " " <<  internal_energy/N_meas
+      outfile_results << temperature << " " << final_internal_energy/N_meas << " " <<  internal_energy/N_meas
                       << " " << S_pi/N_meas << " " << magnetisation/N_meas  << endl;
                       
       cout << "\rtemperature = " << temperature << " done."; cout.flush();
