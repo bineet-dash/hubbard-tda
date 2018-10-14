@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
   if(argc!=4) {cerr << "Enter (1) lattice size, (2) U and (3) no of sweeps.\n"; exit(1);}
   L = atoi(argv[1]);
   U_prime = atof(argv[2]);
-  DELTA = 5.0;
+  DELTA = U_prime + 1;
   int no_sweeps = atoi(argv[3]);
   int N_therm = 0.5*no_sweeps;
   int N_meas = no_sweeps-N_therm;
@@ -64,6 +64,9 @@ int main(int argc, char* argv[])
   U = spa_spectrum.first;
   vector <pair<int,int>> s = select_excitations(spa_spectrum.second,DELTA);
   MatrixXcd H_tda = construct_truncated_tda(s, E_HF);
+
+  cout.precision(3);  cout << H_tda.unaryExpr(&filter) << endl << endl; exit(1);
+  
   VectorXd Htda_eivals = Eigenvalues(H_tda); 
   double free_energy = tda_free_energy(Htda_eivals,E_HF, final_temp);
   double internal_energy = tda_internal_energy(Htda_eivals, E_HF, final_temp);
