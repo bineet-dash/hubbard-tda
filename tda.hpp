@@ -26,6 +26,7 @@ inline double Sqr(double x){return x*x;}
 inline double gs_energy(VectorXd hf_eivals) {return hf_eivals.block(0,0,hf_eivals.size()/2,1).sum();}
 inline double gs_energy(vector<double> v) {return accumulate(v.begin(), v.begin()+v.size()/2, 0.00);}
 inline cd filter(cd x){return (abs(x)<1e-3)?0.0:x;}
+inline double filter_d(double x) {return (abs(x)<1e-3)?0.0:x;}
 
 #define IA 16807
 #define IM 2147483647
@@ -115,12 +116,12 @@ pair<MatrixXcd, VectorXd> Eigenspectrum(MatrixXcd A)
 
 MatrixXcd construct_h0(void)
 {
-    MatrixXcd Mc = MatrixXcd::Zero(2*L,2*L);
-    for(int row=0;row<2*L-1; row++) Mc(row,row+1)=Mc(row+1,row)=-t;
-    Mc(L-1,0)=Mc(0,L-1)=-t; //PBC
-    Mc(2*L-1,L)=Mc(L,2*L-1)= -t; //PBC
-    Mc(L,L-1)= Mc(L-1,L)=0;
-    return Mc;
+  MatrixXcd Mc = MatrixXcd::Zero(2*L,2*L);
+  for(int row=0;row<2*L-1; row++) Mc(row,row+1)=Mc(row+1,row)=-t;
+  Mc(L-1,0)=Mc(0,L-1)=-t; //PBC
+  Mc(2*L-1,L)=Mc(L,2*L-1)= -t; //PBC
+  Mc(L,L-1)= Mc(L-1,L)=0;
+  return Mc;
 }
 
 MatrixXcd matrixelement_sigmax(MatrixXd randsigma)

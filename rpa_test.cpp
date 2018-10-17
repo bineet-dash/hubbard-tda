@@ -38,8 +38,9 @@ int main(int argc, char* argv[])
   cout.precision(3);
 
   // for(int i=0; i<N*N/4; i++) cout << "(" << 
-  // cout << H_rpa.unaryExpr(&filter).real() << endl << endl;
+  cout << endl << H_rpa.unaryExpr(&filter).real() << endl << endl;
 
-  cout <<  Viljk(3,0,0,3,temperature,spa_spectrum.second) << endl;
-  cout <<  Viljk(0,0,3,3,temperature,spa_spectrum.second) << endl;
+  // Viljk(3,0,0,3, temperature,spa_spectrum.second, cout);
+  // Viljk(0,3,3,0,temperature,spa_spectrum.second, cout);
+
 }
