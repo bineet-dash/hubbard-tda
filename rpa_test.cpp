@@ -16,6 +16,8 @@ void greens_sigma_generate(MatrixXd& suggested_sigma, int lattice_index, long & 
   if(ran0(&idum)<=0.5) suggested_sigma(lattice_index,2) *= -1;
 }
 
+inline double squareroot(double x) {return sqrt(x);}
+
 int main(int argc, char* argv[])
 {
   if(argc!=4) {cerr << "Enter (1) lattice size, (2) U and (3) temperature.\n"; exit(1);}
@@ -40,7 +42,11 @@ int main(int argc, char* argv[])
   // for(int i=0; i<N*N/4; i++) cout << "(" << 
   cout << endl << H_rpa.unaryExpr(&filter).real() << endl << endl;
 
-  // Viljk(3,0,0,3, temperature,spa_spectrum.second, cout);
-  // Viljk(0,3,3,0,temperature,spa_spectrum.second, cout);
+  MatrixXcd A = H_rpa.block(0, 0, H_rpa.rows()/2, H_rpa.cols()/2); 
+  MatrixXcd B = H_rpa.block(0, H_rpa.cols()/2, H_rpa.rows()/2, H_rpa.cols()/2);
+  MatrixXcd D = (A+B)*(A-B);
 
+  cout << Eigenvalues(D).unaryExpr(&squareroot).transpose() << endl << endl;
+
+  cout << Eigenvalues(H_rpa, &zgeev_cpp).transpose() << endl << endl;
 }
