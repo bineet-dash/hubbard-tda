@@ -26,6 +26,9 @@ inline double Sqr(double x){return x*x;}
 inline double gs_energy(VectorXd hf_eivals) {return hf_eivals.block(0,0,hf_eivals.size()/2,1).sum();}
 inline double gs_energy(vector<double> v) {return accumulate(v.begin(), v.begin()+v.size()/2, 0.00);}
 inline cd filter(cd x){return (abs(x)<1e-3)?0.0:x;}
+inline double filter_d(double x) {return (abs(x)<1e-3)?0.0:x;}
+inline double fermi_fn(double e_minus_mu, double T) {return (isinf(exp(e_minus_mu/T)))? 0: 1/(exp(e_minus_mu/T)+1);}
+
 
 #define IA 16807
 #define IM 2147483647
@@ -53,7 +56,7 @@ double ran0(long *idum)
 #undef IR
 #undef MASK
 
-bool diagonalize(MatrixXcd& A, vector<double>& lambda, char eigenvec_choice='N')
+bool zheev_cpp(MatrixXcd& A, vector<double>& lambda, char eigenvec_choice='N')
 {
   int N = A.cols();
   int LDA = A.outerStride();
@@ -75,38 +78,62 @@ bool diagonalize(MatrixXcd& A, vector<double>& lambda, char eigenvec_choice='N')
   return INFO==0;
 }
 
-vector <double> stdEigenvalues(MatrixXcd A)
-{
-  std::vector<double> lambda; 
-  if(diagonalize(A,lambda,'N')) return lambda;
+bool zgeev_cpp(MatrixXcd& A, vector<double>& lambda, char eigenvec_choice='N')
+{  
+  int N = A.cols();
+  int LDA = A.outerStride();
+  int INFO = 0;
+  __complex__ double* w = new __complex__ double [N];
+  __complex__ double* vl;
+  __complex__ double* vr;
+  char Nchar = 'N';
+  char Vchar = 'V';
+  char Uchar = 'U';
+  int LWORK = pow(2, N);
+  __complex__ double* WORK= new __complex__ double [LWORK];
+  double* RWORK = new double [LWORK];
+  
+  zgeev_(&Nchar, &eigenvec_choice, &N, reinterpret_cast <__complex__ double*> (A.data()), &LDA, w, vl, &LDA, vr, &LDA, WORK, &LWORK, RWORK, &INFO );
+
+  lambda.clear();
+  for(int i=0; i<N; i++) lambda.push_back(__real__ w[i]);
+
+  delete[] w; delete[] RWORK; delete[] WORK;
+  return INFO==0;
 }
 
-VectorXd Eigenvalues(MatrixXcd A)
+vector <double> stdEigenvalues(MatrixXcd A, bool (*diagonalization_routine)(MatrixXcd&, vector <double>&, char)=&zheev_cpp)
+{
+  std::vector<double> lambda; 
+  if(diagonalization_routine(A,lambda,'N')) return lambda;
+}
+
+VectorXd Eigenvalues(MatrixXcd A, bool (*diagonalization_routine)(MatrixXcd&, vector <double>&, char)=&zheev_cpp)
 {
   std::vector<double> lambda;
-  if(diagonalize(A,lambda,'N'))
+  if(diagonalization_routine(A,lambda,'N'))
  	{
 		Map<ArrayXd> b(lambda.data(),lambda.size());
   	return b;
 	}
 }
 
-MatrixXcd Eigenvectors(MatrixXcd A)
+MatrixXcd Eigenvectors(MatrixXcd A, bool (*diagonalization_routine)(MatrixXcd&, vector <double>&, char)=&zheev_cpp)
 {
 	std::vector<double> lambda;
-  if(diagonalize(A,lambda,'V')) return A; 
+  if(diagonalization_routine(A,lambda,'V')) return A; 
 }
 
-pair<MatrixXcd, vector<double>> stdEigenspectrum(MatrixXcd A)
+pair<MatrixXcd, vector<double>> stdEigenspectrum(MatrixXcd A, bool (*diagonalization_routine)(MatrixXcd&, vector <double>&, char)=&zheev_cpp)
 {
   std::vector<double> lambda;
-  if(diagonalize(A,lambda,'V')) return make_pair(A,lambda);
+  if(diagonalization_routine(A,lambda,'V')) return make_pair(A,lambda);
 }
 
-pair<MatrixXcd, VectorXd> Eigenspectrum(MatrixXcd A)
+pair<MatrixXcd, VectorXd> Eigenspectrum(MatrixXcd A, bool (*diagonalization_routine)(MatrixXcd&, vector <double>&, char)=&zheev_cpp)
 {
   std::vector<double> lambda;
-  if(diagonalize(A,lambda,'V'))
+  if(diagonalization_routine(A,lambda,'V'))
  	{
     Map<ArrayXd> b(lambda.data(),lambda.size());
     return make_pair(A,b);
@@ -115,12 +142,12 @@ pair<MatrixXcd, VectorXd> Eigenspectrum(MatrixXcd A)
 
 MatrixXcd construct_h0(void)
 {
-    MatrixXcd Mc = MatrixXcd::Zero(2*L,2*L);
-    for(int row=0;row<2*L-1; row++) Mc(row,row+1)=Mc(row+1,row)=-t;
-    Mc(L-1,0)=Mc(0,L-1)=-t; //PBC
-    Mc(2*L-1,L)=Mc(L,2*L-1)= -t; //PBC
-    Mc(L,L-1)= Mc(L-1,L)=0;
-    return Mc;
+  MatrixXcd Mc = MatrixXcd::Zero(2*L,2*L);
+  for(int row=0;row<2*L-1; row++) Mc(row,row+1)=Mc(row+1,row)=-t;
+  Mc(L-1,0)=Mc(0,L-1)=-t; //PBC
+  Mc(2*L-1,L)=Mc(L,2*L-1)= -t; //PBC
+  Mc(L,L-1)= Mc(L-1,L)=0;
+  return Mc;
 }
 
 MatrixXcd matrixelement_sigmax(MatrixXd randsigma)
@@ -155,113 +182,16 @@ MatrixXcd matrixelement_sigmaz(MatrixXd randsigma)
 	return Mcz;
 }
 
-ofstream nullout;
-cd matrix_elem_optimized(int i, int m, int j, int n, double e_hf, ostream& debugout=nullout)
+cd tda_matrix_elem(int i, int j, int k, int l, double e_hf, double T, vector <double> hf)
 {
-  cd res = del(i,j)*del(m,n)*(e_hf-L*U_prime*L/4);
+  cd u_iljk = 0.0;
+  for(int s=0; s<L; s++) u_iljk += conj(U(s,l)*U(s+L,i)-U(s,i)*U(s+L,l))*(U(s,k)*U(s+L,j)-U(s,j)*U(s+L,k));
 
-  debugout << res.real() << " -> \n";
-
-
-  for(int site=0; site<L; site++)
-  {
-    res += U_prime*(conj(U(site,m))*U(site,n)*conj(U(site+L,j))*U(site+L,i)+ conj(U(site,j))*U(site,n)*conj(U(site+L,m))*U(site+L,i))
-          + conj(U(site,m))*U(site,i)*conj(U(site+L,j))*U(site+L,n)-conj(U(site,j))*U(site,i)*conj(U(site+L,m))*U(site+L,n);
-
-    debugout << conj(U(site,m))*U(site,n)*conj(U(site+L,j))*U(site+L,i) << " " << conj(U(site,j))*U(site,n)*conj(U(site+L,m))*U(site+L,i) 
-            << " " << conj(U(site,m))*U(site,i)*conj(U(site+L,j))*U(site+L,n) << " " << -conj(U(site,j))*U(site,i)*conj(U(site+L,m))*U(site+L,n) << endl << endl;
-  }
-
-  debugout << res.real() << " -> ";
-
-  if(m==n)
-  {
-    for(int site=0; site<L; site++)
-    {
-      res += 0.25*U_prime*sigma(site,2)*conj(U(site,j))*U(site,i) - 0.25*U_prime*sigma(site,2)*conj(U(site+L,j))*U(site,i) + U_prime*
-            ( -U.row(site).squaredNorm()*conj(U(site+L,j))*U(site+L,i)- conj(U(site,j))*U(site+L,i)*U.row(site).dot(U.row(site+L))
-            + U.row(site+L).dot(U.row(site))*U(site,i)*conj(U(site+L,j))- conj(U(site,j))*U(site,i)*U.row(site+L).squaredNorm() );
-    }
-  }
-  debugout << res.real() << " -> ";
-
-  if(i==j)
-  {
-    for(int site=0; site<L; site++)
-    {
-      res += -0.25*U_prime*sigma(site,2)*conj(U(site,m))*U(site,n) + 0.25*U_prime*sigma(site,2)*conj(U(site+L,m))*U(site+L,n) + U_prime*
-            ( conj(U(site,m))*U.row(site).dot(U.row(site+L))*U(site+L,n) - conj(U(site,m))*U(site,n)*U.row(site+L).squaredNorm() 
-						+ conj(U(site+L,m))*U(site+L,n)*U.row(site).squaredNorm() - conj(U(site+L,m))*U(site,n)*U.row(site+L).dot(U.row(site)) );
-    }
-  }
-  debugout << res.real() << " -> ";
-
-  if(m==n && i==j)
-  {
-    for(int site=0; site<L; site++)
-    {
-      res += U_prime*(U.row(site).squaredNorm()*U.row(site+L).squaredNorm() - U.row(site+L).dot(U.row(site))*U.row(site).dot(U.row(site+L)))
-            + 0.25*U_prime*sigma(site,2)*(U.row(site+L).squaredNorm()-U.row(site).squaredNorm()); 
-    }
-  }
-  debugout << res.real() << " -> ";
-
-  return res;
+  cd elem = del(i,k)*del(j,l)*(e_hf+hf[i]-hf[j]) + u_iljk*(fermi_fn(hf[k],T)-fermi_fn(hf[l],T));
+  return elem;
 }
 
-cd matrix_elem_more_optimized(int i, int m, int j, int n, double e_hf)
-{
-  cd res = del(i,j)*del(m,n)*(e_hf-L*U_prime*L/4);
-  for(int site=0; site<L; site++)
-  {
-    res += U_prime*(-conj(U(site,m))*U(site,n)*conj(U(site+L,j))*U(site+L,i)+ conj(U(site,j))*U(site,n)*conj(U(site+L,m))*U(site+L,i))
-          + conj(U(site,m))*U(site,i)*conj(U(site+L,j))*U(site+L,n)-conj(U(site,j))*U(site,i)*conj(U(site+L,m))*U(site+L,n);
-  }
-
-  if(m==n)
-  {
-    for(int site=0; site<L; site++)
-    {
-      res += 0.25*U_prime*sigma(site,2)*(conj(U(site,j))*U(site,i)-conj(U(site+L,j))*U(site,i)) - U_prime*(conj(U(site+L,j))*U(site+L,i)+conj(U(site,j))*U(site,i));
-    }
-  }
-
-  if(i==j)
-  {
-    for(int site=0; site<L; site++)
-    {
-      res += -0.25*U_prime*sigma(site,2)*(conj(U(site,m))*U(site,n)-conj(U(site+L,m))*U(site+L,n)) + U_prime*(conj(U(site,m))*U(site,n)+conj(U(site+L,m))*U(site+L,n));
-    }
-  }
-
-  if(m==n && i==j)
-  {
-    for(int site=0; site<L; site++)
-    {
-      res += U_prime; 
-    }
-  }
-  return res;
-}
-
-cd check_matrix_elem(int i, int m, int j, int n, double e_hf)
-{
-  cd v_spa = 0.0;
-  cd v_exact = 0.0;
-  for(int site=0; site <L; site++)
-  {
-    v_spa += U_prime/4*sigma(site,2)*(del(i,j)*(conj(U(site,m))*U(site,n)-conj(U(site+L,m))*U(site+L,n)) - del(m,n)*(conj(U(site,i))*U(site,j)-conj(U(site+L,i))*U(site+L,j)));
-    v_exact += U_prime*(del(i,j)*(conj(U(site,m))*U(site,n)+ conj(U(site+L,m))*U(site+L,n)) - del(m,n)*(conj(U(site,i))*U(site,j) + conj(U(site+L,i))*U(site+L,j))
-              + conj(U(site,m)*U(site+L,j))*U(site,n)*U(site+L,i) - conj(U(site,j)*U(site+L,m))*U(site,i)*U(site+L,n)
-              + 2.0*real(conj(U(site,j)*U(site+L,m))*U(site,n)*U(site+L,i))); 
-  }
-  v_exact += L*U_prime*del(i,j)*del(m,n);
-  cd matrix_el = v_exact - v_spa +del(i,j)*del(m,n)*(e_hf-L*U_prime*L/4);
-  return matrix_el;
-} 
-
-
-MatrixXcd construct_truncated_tda(vector <pair<int,int>> excitations, double e_hf)
+MatrixXcd construct_truncated_tda(vector <pair<int,int>> excitations, double e_hf, double T, vector <double> hf)
 {
   int N = excitations.size();
 
@@ -270,7 +200,7 @@ MatrixXcd construct_truncated_tda(vector <pair<int,int>> excitations, double e_h
   {
     for(int it2=0; it2<H_tda.cols(); it2++)
     { 
-      cd hij= matrix_elem_more_optimized(excitations[it1].first, excitations[it1].second, excitations[it2].first, excitations[it2].second, e_hf);
+      cd hij= tda_matrix_elem(excitations[it1].first, excitations[it1].second, excitations[it2].first, excitations[it2].second, T, e_hf, hf);
       H_tda(it1,it2) = hij; 
     }
   }
@@ -278,16 +208,16 @@ MatrixXcd construct_truncated_tda(vector <pair<int,int>> excitations, double e_h
 }
 
 
-MatrixXcd construct_tda(double e_hf)
-{
-  MatrixXcd H_tda = MatrixXcd::Zero(L*L,L*L);
-  for(int it1=0; it1<H_tda.rows(); it1++)
-  {
-    for(int it2=0; it2<H_tda.cols(); it2++)
-      H_tda(it1,it2) = check_matrix_elem(mi(it1).first,mi(it1).second, mi(it2).first, mi(it2).second, e_hf);
-  }
-  return H_tda;
-}
+// MatrixXcd construct_tda(double e_hf)
+// {
+//   MatrixXcd H_tda = MatrixXcd::Zero(L*L,L*L);
+//   for(int it1=0; it1<H_tda.rows(); it1++)
+//   {
+//     for(int it2=0; it2<H_tda.cols(); it2++)
+//     cd hij= tda_matrix_elem(excitations[it1].first, excitations[it1].second, excitations[it2].first, excitations[it2].second, T, e_hf, hf);
+//   }
+//   return H_tda;
+// }
 
 double tda_free_energy(VectorXd tda_eivals, double e_hf, double temperature)
 {
@@ -350,7 +280,7 @@ double get_mu(double temperature, VectorXd v)
 double spa_free_energy(MatrixXcd Mc, double temperature)
 {
   std::vector<double> eigenvalues;
-  diagonalize(Mc, eigenvalues);
+  zheev_cpp(Mc, eigenvalues, 'N');
   sort(eigenvalues.begin(),eigenvalues.end());
 
   double free_energy = 0; double ekt =0;
@@ -368,7 +298,7 @@ double spa_free_energy(MatrixXcd Mc, double temperature)
 double spa_internal_energy(MatrixXcd Mc, double temperature)
 {
   std::vector<double> eigenvalues;
-  diagonalize(Mc, eigenvalues);
+  zheev_cpp(Mc, eigenvalues, 'N');
   sort(eigenvalues.begin(),eigenvalues.end());
   double mu = get_mu(temperature, eigenvalues);
 

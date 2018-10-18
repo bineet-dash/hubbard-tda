@@ -24,7 +24,7 @@ vector <pair<int,int>> select_excitations(vector <double> v, double delta)
   for(int index = lower_index; index < fermi_index; index++) 
   {
     int upper_index = upper_bound(begin_it,end_it, v[index]+delta)-begin_it;
-    for(int i = fermi_index; i<upper_index; i++) excitations.push_back(make_pair(index,i));
+    for(int i = fermi_index; i<upper_index; i++) excitations.push_back(make_pair(i,index));
   }
   return excitations;
 }
@@ -63,9 +63,9 @@ int main(int argc, char* argv[])
   double E_HF = gs_energy(spa_spectrum.second); //update this
   U = spa_spectrum.first;
   vector <pair<int,int>> s = select_excitations(spa_spectrum.second,DELTA);
-  MatrixXcd H_tda = construct_truncated_tda(s, E_HF);
+  MatrixXcd H_tda = construct_truncated_tda(s, E_HF, final_temp, spa_spectrum.second);
 
-  cout.precision(3);  cout << H_tda.unaryExpr(&filter) << endl << endl; exit(1);
+  // cout.precision(3);  cout << H_tda.unaryExpr(&filter) << endl << endl; exit(1);
   
   VectorXd Htda_eivals = Eigenvalues(H_tda); 
   double free_energy = tda_free_energy(Htda_eivals,E_HF, final_temp);
@@ -96,7 +96,7 @@ int main(int argc, char* argv[])
           U = suggested_spa_spectrum.first;
              
           vector <pair<int,int>> s = select_excitations(suggested_spa_spectrum.second,DELTA);              
-          MatrixXcd suggested_Htda = construct_truncated_tda(s, suggested_E_HF);            
+          MatrixXcd suggested_Htda = construct_truncated_tda(s, suggested_E_HF, temperature, suggested_spa_spectrum.second);            
           VectorXd suggested_Htda_eivals = Eigenvalues(suggested_Htda);
           double suggested_free_energy = tda_free_energy(suggested_Htda_eivals,suggested_E_HF, temperature);            
           double suggested_internal_energy = tda_internal_energy(suggested_Htda_eivals,suggested_E_HF, temperature);            
@@ -138,7 +138,7 @@ int main(int argc, char* argv[])
           MatrixXcd original_U = U;
           U = suggested_spa_spectrum.first;
           vector <pair<int,int>> s = select_excitations(suggested_spa_spectrum.second,DELTA);
-          suggested_Htda = construct_truncated_tda(s, suggested_E_HF);
+          MatrixXcd suggested_Htda = construct_truncated_tda(s, suggested_E_HF, temperature, suggested_spa_spectrum.second);
           VectorXd suggested_Htda_eivals = Eigenvalues(suggested_Htda);
           double suggested_free_energy = tda_free_energy(suggested_Htda_eivals,suggested_E_HF, temperature);
           double suggested_internal_energy = tda_internal_energy(suggested_Htda_eivals,suggested_E_HF, temperature);            
